@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DEPLOY_USER = "ubuntu"
-        DEPLOY_HOST = "172.31.3.202"      // Production Private IP
+        DEPLOY_HOST = "172.31.3.202"
         DEPLOY_PATH = "/var/www/project.com"
         SSH_KEY = "/var/lib/jenkins/.ssh/deploy_ed25519"
     }
@@ -42,6 +42,22 @@ pipeline {
             }
         }
 
+        stage('Verify Docker Container') {
+            steps {
+                sh """
+                ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} '
+                    echo "Checking Docker container..."
+                    docker ps --filter "name=project-docker-test"
+
+                    echo "Checking Docker website..."
+                    curl -f http://localhost:8081 > /dev/null
+
+                    echo "Docker website is working!"
+                '
+                """
+            }
+        }
+
         stage('Reload Apache') {
             steps {
                 sh """
@@ -57,6 +73,7 @@ pipeline {
         success {
             echo "✅ Deployment completed successfully!"
         }
+
         failure {
             echo "❌ Deployment failed!"
         }
